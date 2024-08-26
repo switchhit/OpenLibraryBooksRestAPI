@@ -1,5 +1,6 @@
 package com.openlibrary.openlibrary.service;
 
+import com.openlibrary.openlibrary.exception.BookNotFoundException;
 import com.openlibrary.openlibrary.model.Book;
 import com.openlibrary.openlibrary.repository.BookRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -33,16 +34,19 @@ public class BookService {
         log.info("Title {} is not present in the database, trying to hit the API....", name);
         String url = "https://openlibrary.org/search.json?q="+name;
         BookResponse response = restTemplate.getForObject(url, BookResponse.class);
-        if(response!=null && !response.getDocs().isEmpty()){
-            OLBook olBook = response.getDocs().get(0);
-            Book book = new Book();
-            book.setTitle(olBook.getTitle().toLowerCase());
-            book.setAuthor(olBook.getAuthor_name());
-            book.setOpenId(olBook.getKey());
-            repository.save(book);
-            return book;
+        if(response==null || response.getDocs().isEmpty()){
+            log.error("Book not found");
+            throw new BookNotFoundException("book not found");
         }
-        return null;
+
+        OLBook olBook = response.getDocs().get(0);
+        Book book = new Book();
+        book.setTitle(olBook.getTitle().toLowerCase());
+        book.setAuthor(olBook.getAuthor_name());
+        book.setOpenId(olBook.getKey());
+        repository.save(book);
+        return book;
+
     }
 
     public void deleteBookByName(String name) {
